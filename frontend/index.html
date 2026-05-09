@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- ── MOBILE CRITICAL ── -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LUMINOS" />
+  <meta name="theme-color" content="#030308" />
+  <meta name="msapplication-navbutton-color" content="#030308" />
+
+  <!-- ── SEO ── -->
+  <title>LUMINOS – Concert Light Show</title>
+  <meta name="description" content="Synchronized concert phone light show system. Transform your audience into a living LED display." />
+
+  <!-- ── PWA MANIFEST ── -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- ── ICONS ── -->
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <!-- ── PRECONNECT ── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+
+  <!-- ── PREVENT FLICKER ON LOAD ── -->
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background: #030308;
+      overflow: hidden;
+      /* Prevent iOS bounce scroll */
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+      /* Prevent text selection during touch */
+      -webkit-user-select: none;
+      user-select: none;
+      /* Prevent callout on long press */
+      -webkit-touch-callout: none;
+      /* Prevent tap highlight */
+      -webkit-tap-highlight-color: transparent;
+    }
+    #root { width: 100vw; height: 100dvh; overflow: hidden; }
+    /* Initial loader */
+    #loader {
+      position: fixed; inset: 0; background: #030308;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 9999; font-family: 'Courier New', monospace;
+    }
+    #loader .logo {
+      font-size: clamp(2rem, 10vw, 3.5rem);
+      font-weight: 900; letter-spacing: 0.2em;
+      color: #00d4ff;
+      text-shadow: 0 0 40px #00d4ff88, 0 0 80px #8b00ff44;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    #loader .sub {
+      font-size: 10px; letter-spacing: 0.35em;
+      color: rgba(255,255,255,0.35); margin-top: 10px;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Initial loader shown until React mounts -->
+  <div id="loader">
+    <div class="logo">LUMINOS</div>
+    <div class="sub">LOADING...</div>
+  </div>
+
+  <div id="root"></div>
+
+  <script type="module" src="/src/main.jsx"></script>
+
+  <!-- Remove loader when app mounts -->
+  <script>
+    window.__removeLoader = function() {
+      var l = document.getElementById('loader');
+      if (l) { l.style.opacity = '0'; l.style.transition = 'opacity 0.4s'; setTimeout(function(){ l.remove(); }, 400); }
+    };
+  </script>
+</body>
+</html>

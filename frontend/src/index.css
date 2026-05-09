@@ -1,0 +1,170 @@
+/* ── LUMINOS GLOBAL STYLES ───────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --c-bg:        #030308;
+  --c-blue:      #00d4ff;
+  --c-purple:    #8b00ff;
+  --c-magenta:   #ff00cc;
+  --c-green:     #39ff14;
+  --c-gold:      #ffaa00;
+  --c-red:       #ff1122;
+  --c-glass:     rgba(255,255,255,0.03);
+  --c-border:    rgba(255,255,255,0.08);
+  --font-mono:   'Courier New', Courier, monospace;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+}
+
+html {
+  height: -webkit-fill-available;
+  background: var(--c-bg);
+  /* Prevent iOS rubber-band scroll */
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--c-bg);
+  color: #fff;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow: hidden;
+  /* Disable iOS tap highlight */
+  -webkit-tap-highlight-color: transparent;
+  /* Disable text selection */
+  -webkit-user-select: none;
+  user-select: none;
+  /* Disable callout on long-press */
+  -webkit-touch-callout: none;
+  /* GPU layer for the body */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+#root {
+  width: 100vw;
+  height: 100dvh;
+  height: -webkit-fill-available;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── SCROLLABLE AREAS ── */
+.scrollable {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.scrollable::-webkit-scrollbar { width: 3px; }
+.scrollable::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+.scrollable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+/* ── RANGE INPUTS ── */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.12);
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  /* Larger touch target on mobile */
+  touch-action: pan-x;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.4);
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+}
+input[type=range]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.4);
+}
+
+/* ── COLOR INPUTS ── */
+input[type=color] {
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  background: none;
+  padding: 2px;
+}
+
+/* ── TEXTAREA ── */
+textarea {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: #fff;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  resize: none;
+  outline: none;
+  line-height: 1.6;
+  width: 100%;
+  /* iOS fix */
+  -webkit-appearance: none;
+}
+
+/* ── CANVAS (GPU-accelerated) ── */
+canvas {
+  display: block;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  image-rendering: optimizeSpeed;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes scaleIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+@keyframes spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes glow    { 0%,100%{text-shadow:0 0 20px currentColor} 50%{text-shadow:0 0 40px currentColor,0 0 80px currentColor} }
+
+/* ── GLASS PANEL ── */
+.glass {
+  background: var(--c-glass);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── NEON TEXT ── */
+.neon-blue   { color: var(--c-blue);    text-shadow: 0 0 20px var(--c-blue); }
+.neon-purple { color: var(--c-purple);  text-shadow: 0 0 20px var(--c-purple); }
+.neon-green  { color: var(--c-green);   text-shadow: 0 0 20px var(--c-green); }
+
+/* ── BUTTON BASE ── */
+button {
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all 0.18s ease;
+  /* Larger tap targets on mobile */
+  min-height: 36px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button:active { transform: scale(0.96); }
