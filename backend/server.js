@@ -61,6 +61,7 @@ let showState = {
   mosaicRotate: false,
   mosaicRotateSpeed: 1,
   mosaicCustomColors: ['#ff1122','#ff00cc','#8b00ff','#00d4ff','#39ff14','#ffaa00','#ffffff','#ff6600'],
+  beatMode: false,
   serverTime: Date.now(),
 };
 

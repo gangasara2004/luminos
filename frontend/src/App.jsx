@@ -3,13 +3,12 @@ import React, { useState, useEffect } from 'react';
 import LoginScreen  from './components/LoginScreen.jsx';
 import AdminDash    from './components/AdminDash.jsx';
 import AudienceView from './components/AudienceView.jsx';
-import BeatView     from './components/BeatView.jsx';
 import { BACKEND_URL } from './utils/constants.js';
 
 const TOKEN_KEY = 'luminos_admin_token';
 
 export default function App() {
-  // 'audience' | 'beat' | 'login' | 'admin'
+  // 'audience' | 'login' | 'admin'
   const [view,  setView]  = useState('audience');
   const [token, setToken] = useState(null);
 
@@ -37,14 +36,13 @@ export default function App() {
     setView('audience');
   };
 
-  if (view === 'beat')    return <BeatView    onBack={() => setView('audience')} />;
-  if (view === 'login')   return <LoginScreen onLogin={handleLogin} onBack={() => setView('audience')} />;
-  if (view === 'admin' && token) return <AdminDash token={token} onLogout={handleLogout} onGoAudience={() => setView('audience')} />;
+  if (view === 'login')          return <LoginScreen onLogin={handleLogin} onBack={() => setView('audience')} />;
+  if (view === 'admin' && token) return <AdminDash   token={token} onLogout={handleLogout} onGoAudience={() => setView('audience')} />;
 
+  // Audience view — BeatView is embedded inside it, triggered by server state
   return (
     <AudienceView
       onAdminTap={() => token ? setView('admin') : setView('login')}
-      onBeatTap={() => setView('beat')}
     />
   );
 }

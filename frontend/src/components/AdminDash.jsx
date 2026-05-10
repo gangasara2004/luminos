@@ -163,6 +163,25 @@ export default function AdminDash({ token, onLogout, onGoAudience }) {
         {state.blackout ? '⬛ BLACKOUT ACTIVE — TAP TO RESTORE' : '⬛ EMERGENCY BLACKOUT  [SPACE]'}
       </button>
 
+
+      {/* BEAT MODE TOGGLE */}
+      <button
+        onClick={() => dispatch({ beatMode: !state.beatMode })}
+        style={{
+          width: '100%', padding: 13, marginBottom: 14,
+          background: state.beatMode ? 'rgba(255,0,204,0.2)' : 'rgba(255,255,255,0.03)',
+          border: `2px solid ${state.beatMode ? '#ff00cc' : 'rgba(255,255,255,0.1)'}`,
+          borderRadius: 10,
+          color: state.beatMode ? '#ff00cc' : 'rgba(255,255,255,0.38)',
+          fontSize: 12, letterSpacing: '0.25em', cursor: 'pointer',
+          fontFamily: "'Courier New', monospace",
+          boxShadow: state.beatMode ? '0 0 28px rgba(255,0,204,0.3)' : 'none',
+          transition: 'all .2s',
+        }}
+      >
+        {state.beatMode ? '♪ BEAT MODE ACTIVE — TAP TO DISABLE' : '♪ ENABLE BEAT MODE  (MIC REACTIVE)'}
+      </button>
+
       {/* MAIN GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: 13 }}>
 
