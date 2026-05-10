@@ -6,7 +6,7 @@ import { drawFrame, createParticles, createLasers } from '../utils/canvas.js';
 
 const TOTAL_DEVICES = 100;
 
-export default function AudienceView({ onAdminTap }) {
+export default function AudienceView({ onAdminTap, onBeatTap }) {
   const canvasRef     = useRef(null);
   const animRef       = useRef(null);
   const stateRef      = useRef(null);
@@ -288,6 +288,35 @@ export default function AudienceView({ onAdminTap }) {
         onClick={(e) => { e.stopPropagation(); handleSecretTap(); }}
         style={{ position: 'absolute', top: 0, right: 0, width: 88, height: 88, zIndex: 30 }}
       />
+
+
+      {/* BEAT MODE BUTTON */}
+      {!showJoin && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onBeatTap(); }}
+          style={{
+            position: 'absolute',
+            bottom: 'max(16px, env(safe-area-inset-bottom))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(255,0,204,0.12)',
+            border: '1px solid rgba(255,0,204,0.35)',
+            color: 'rgba(255,0,204,0.8)',
+            padding: '8px 20px',
+            borderRadius: 20,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.2em',
+            cursor: 'pointer',
+            fontFamily: "'Courier New', monospace",
+            zIndex: 10,
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          ♪ BEAT MODE
+        </button>
+      )}
 
       {/* Device # */}
       {!showJoin && (
