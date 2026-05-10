@@ -4,19 +4,13 @@ import { useSocket }   from '../hooks/useSocket.js';
 import PreviewCanvas   from './PreviewCanvas.jsx';
 import MosaicPanel     from './MosaicPanel.jsx';
 import AIPanel         from './AIPanel.jsx';
-import {
-  ANIMATION_MODES, COLOR_PRESETS, SHOW_PRESETS, KB_SHORTCUTS,
-  MOSAIC_PALETTES,
-} from '../utils/constants.js';
+import { ANIMATION_MODES, COLOR_PRESETS, SHOW_PRESETS, KB_SHORTCUTS } from '../utils/constants.js';
 
-// ── STYLE HELPERS ─────────────────────────────────────────────────────────────
 const G = {
   glass: {
     background: 'rgba(255,255,255,0.03)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 12,
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
   },
 };
 
@@ -27,17 +21,13 @@ function btn(active, color = '#00d4ff', extra = {}) {
     color: active ? color : 'rgba(255,255,255,0.58)',
     borderRadius: 8, cursor: 'pointer',
     fontFamily: "'Courier New', monospace",
-    letterSpacing: '0.08em',
-    transition: 'all 0.17s',
+    letterSpacing: '0.08em', transition: 'all 0.17s',
     boxShadow: active ? `0 0 16px ${color}33` : 'none',
-    outline: 'none',
-    minHeight: 36,
-    touchAction: 'manipulation',
+    outline: 'none', minHeight: 36, touchAction: 'manipulation',
     ...extra,
   };
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────────────────
 function useToast() {
   const [toast, setToast] = useState(null);
   const show = useCallback((msg, type = 'ok') => {
@@ -51,17 +41,16 @@ function useToast() {
   return { toast, show };
 }
 
-// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function AdminDash({ token, onLogout, onGoAudience }) {
-  const { connected, state, stats, latency, dispatch, onBeat } = useSocket({ role: 'admin', token });
+  const { connected, state, stats, latency, dispatch } = useSocket({ role: 'admin', token });
   const { toast, show: showToast } = useToast();
-  const [activeTab, setActiveTab]  = useState(0);
-  const [seqSteps, setSeqSteps]    = useState([]);
+  const [activeTab, setActiveTab]   = useState(0);
+  const [seqSteps, setSeqSteps]     = useState([]);
   const [seqRunning, setSeqRunning] = useState(false);
-  const [seqIdx, setSeqIdx]        = useState(0);
+  const [seqIdx, setSeqIdx]         = useState(0);
   const seqTimerRef = useRef(null);
 
-  // ── KEYBOARD SHORTCUTS
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -86,11 +75,10 @@ export default function AdminDash({ token, onLogout, onGoAudience }) {
     return () => window.removeEventListener('keydown', handler);
   }, [state.blackout, dispatch]);
 
-  // ── SEQUENCE RUNNER
+  // Sequence
   const runSeq = useCallback(() => {
     if (!seqSteps.length) { showToast('Add steps first', 'warn'); return; }
-    setSeqRunning(true);
-    let i = 0;
+    setSeqRunning(true); let i = 0;
     const step = () => {
       if (i >= seqSteps.length) { setSeqRunning(false); setSeqIdx(0); return; }
       const s = seqSteps[i];
@@ -101,157 +89,142 @@ export default function AdminDash({ token, onLogout, onGoAudience }) {
     step();
   }, [seqSteps, dispatch, showToast]);
 
-  const stopSeq = useCallback(() => {
-    clearTimeout(seqTimerRef.current);
-    setSeqRunning(false);
-  }, []);
-
-  const addSeqStep = (mode) => {
-    setSeqSteps(p => [...p, { mode, color: state.color, bpm: state.bpm, duration: 8 }]);
-  };
+  const stopSeq = useCallback(() => { clearTimeout(seqTimerRef.current); setSeqRunning(false); }, []);
+  const addSeqStep  = (mode) => setSeqSteps(p => [...p, { mode, color: state.color, bpm: state.bpm, duration: 8 }]);
   const removeSeqStep = (i) => setSeqSteps(p => p.filter((_, j) => j !== i));
 
-  // ── TABS
   const TABS = ['CONTROL', 'MOSAIC ⊞', 'SEQUENCE', 'AI ✦', 'KEYS'];
 
-  // ── RENDER
   return (
     <div style={{
-      minHeight: '100dvh', background: '#030308',
+      /* KEY: fixed + overflow scroll = proper mobile scroll without body scroll issues */
+      position: 'fixed', inset: 0,
+      background: '#030308',
       backgroundImage: 'radial-gradient(ellipse at 20% 20%,rgba(139,0,255,0.07) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(0,212,255,0.05) 0%,transparent 60%)',
       color: '#fff', fontFamily: "'Courier New', monospace",
-      padding: `max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))`,
-      boxSizing: 'border-box', overflowY: 'auto',
+      overflowY: 'scroll',
+      overflowX: 'hidden',
       WebkitOverflowScrolling: 'touch',
+      paddingTop:    'max(14px, env(safe-area-inset-top))',
+      paddingBottom: 'max(40px, env(safe-area-inset-bottom))',
+      paddingLeft:   'max(14px, env(safe-area-inset-left))',
+      paddingRight:  'max(14px, env(safe-area-inset-right))',
+      boxSizing: 'border-box',
     }}>
 
-      {/* ── TOAST */}
+      {/* TOAST */}
       {toast && (
         <div key={toast.id} style={{
-          position: 'fixed', top: 16, right: 16, zIndex: 1000,
-          background: toast.type === 'error' ? 'rgba(255,20,20,0.93)' : toast.type === 'warn' ? 'rgba(255,150,0,0.93)' : 'rgba(0,212,255,0.93)',
-          color: '#000', padding: '10px 18px', borderRadius: 8,
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999,
+          background: toast.type==='error' ? 'rgba(255,20,20,0.95)' : toast.type==='warn' ? 'rgba(255,150,0,0.95)' : 'rgba(0,212,255,0.95)',
+          color: '#000', padding: '10px 20px', borderRadius: 8,
           fontSize: 11, letterSpacing: '0.12em',
           fontFamily: "'Courier New', monospace",
           animation: 'slideDown .3s ease',
           maxWidth: 'calc(100vw - 32px)',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
         }}>
           {toast.msg}
         </div>
       )}
 
-      {/* ── HEADER */}
+      {/* HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div style={{ fontSize: 'clamp(1.1rem, 4vw, 1.7rem)', fontWeight: 900, letterSpacing: '0.22em', color: '#00d4ff', textShadow: '0 0 24px #00d4ff88' }}>LUMINOS</div>
+          <div style={{ fontSize: 'clamp(1.1rem,4vw,1.7rem)', fontWeight: 900, letterSpacing: '0.22em', color: '#00d4ff', textShadow: '0 0 24px #00d4ff88' }}>LUMINOS</div>
           <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>CONCERT LIGHT CONTROL</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Connection status */}
           <div style={{ ...G.glass, padding: '5px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: connected ? '#39ff14' : '#ff4400', boxShadow: `0 0 10px ${connected ? '#39ff14' : '#ff4400'}`, animation: 'blink 2s infinite' }} />
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: connected ? '#39ff14' : '#ff4400', boxShadow: `0 0 10px ${connected?'#39ff14':'#ff4400'}`, animation: 'blink 2s infinite' }} />
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em' }}>
               {connected ? `${stats.audience} LIVE · ${latency}ms` : 'OFFLINE'}
             </span>
           </div>
-          <button onClick={onGoAudience} style={{ ...btn(false, '#39ff14'), padding: '8px 14px', fontSize: 11, fontWeight: 700 }}>▶ AUDIENCE</button>
-          <button onClick={onLogout} style={{ ...btn(false, '#ff1122'), padding: '8px 14px', fontSize: 11 }}>⎋ LOGOUT</button>
+          <button onClick={onGoAudience} style={{ ...btn(false,'#39ff14'), padding: '8px 14px', fontSize: 11, fontWeight: 700 }}>▶ AUDIENCE</button>
+          <button onClick={onLogout}     style={{ ...btn(false,'#ff1122'), padding: '8px 14px', fontSize: 11 }}>⎋ LOGOUT</button>
         </div>
       </div>
 
-      {/* ── BLACKOUT BAR */}
-      <button
-        onClick={() => dispatch({ blackout: !state.blackout })}
-        style={{
-          width: '100%', padding: 13, marginBottom: 14,
-          background: state.blackout ? 'rgba(255,17,34,0.22)' : 'rgba(255,255,255,0.03)',
-          border: `2px solid ${state.blackout ? '#ff1122' : 'rgba(255,255,255,0.1)'}`,
-          borderRadius: 10,
-          color: state.blackout ? '#ff4455' : 'rgba(255,255,255,0.38)',
-          fontSize: 12, letterSpacing: '0.25em', cursor: 'pointer',
-          fontFamily: "'Courier New', monospace",
-          boxShadow: state.blackout ? '0 0 28px rgba(255,17,34,0.28)' : 'none',
-          transition: 'all .2s',
-        }}
-      >
+      {/* BLACKOUT */}
+      <button onClick={() => dispatch({ blackout: !state.blackout })} style={{
+        width: '100%', padding: 13, marginBottom: 14,
+        background: state.blackout ? 'rgba(255,17,34,0.22)' : 'rgba(255,255,255,0.03)',
+        border: `2px solid ${state.blackout ? '#ff1122' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius: 10,
+        color: state.blackout ? '#ff4455' : 'rgba(255,255,255,0.38)',
+        fontSize: 12, letterSpacing: '0.25em', cursor: 'pointer',
+        fontFamily: "'Courier New', monospace",
+        boxShadow: state.blackout ? '0 0 28px rgba(255,17,34,0.28)' : 'none',
+        transition: 'all .2s',
+      }}>
         {state.blackout ? '⬛ BLACKOUT ACTIVE — TAP TO RESTORE' : '⬛ EMERGENCY BLACKOUT  [SPACE]'}
       </button>
 
-      {/* ── MAIN GRID */}
+      {/* MAIN GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: 13 }}>
 
-        {/* ── LEFT COLUMN */}
+        {/* LEFT */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {/* Preview */}
           <div style={{ ...G.glass, padding: 13 }}>
             <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)', marginBottom: 9 }}>LIVE PREVIEW</div>
             <PreviewCanvas state={state} />
           </div>
 
-          {/* Stats */}
           <div style={{ ...G.glass, padding: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {[
-              ['MODE',    state.mode.toUpperCase()],
-              ['BPM',     state.bpm],
-              ['BRIGHT',  state.brightness + '%'],
-              ['DEVICES', stats.audience],
-            ].map(([l, v]) => (
+            {[['MODE',state.mode.toUpperCase()],['BPM',state.bpm],['BRIGHT',state.brightness+'%'],['DEVICES',stats.audience]].map(([l,v]) => (
               <div key={l} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '9px 11px' }}>
                 <div style={{ fontSize: 8, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.28)', marginBottom: 4 }}>{l}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#00d4ff' }}>{v}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: l==='DEVICES'?'#39ff14':'#00d4ff' }}>{v}</div>
               </div>
             ))}
           </div>
 
-          {/* Show Presets */}
           <div style={{ ...G.glass, padding: 13 }}>
             <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)', marginBottom: 9 }}>SHOW PRESETS</div>
             {SHOW_PRESETS.map(p => (
-              <button key={p.name} onClick={() => { dispatch({ mode: p.mode, color: p.color, color2: p.color2, bpm: p.bpm }); showToast(`Loaded: ${p.name}`); }}
+              <button key={p.name} onClick={() => { dispatch({ mode:p.mode, color:p.color, color2:p.color2, bpm:p.bpm }); showToast(`Loaded: ${p.name}`); }}
                 style={{ ...btn(false), padding: '8px 11px', fontSize: 10, textAlign: 'left', width: '100%', display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                <span>{p.name}</span>
-                <span style={{ opacity: .38, fontSize: 9 }}>{p.bpm}BPM</span>
+                <span>{p.name}</span><span style={{ opacity:.38, fontSize:9 }}>{p.bpm}BPM</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* ── RIGHT COLUMN */}
+        {/* RIGHT */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {/* Tabs */}
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {TABS.map((t, i) => (
               <button key={t} onClick={() => setActiveTab(i)}
-                style={{ ...btn(activeTab === i), padding: '6px 10px', fontSize: 9, letterSpacing: '0.1em', flex: 1, minWidth: 60 }}>
+                style={{ ...btn(activeTab===i), padding: '6px 10px', fontSize: 9, letterSpacing: '0.1em', flex: 1, minWidth: 55 }}>
                 {t}
               </button>
             ))}
           </div>
 
-          {/* ── TAB 0: CONTROL */}
+          {/* TAB 0: CONTROL */}
           {activeTab === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-              {/* Mode Grid */}
               <div style={{ ...G.glass, padding: 13 }}>
                 <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)', marginBottom: 9 }}>ANIMATION MODE</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
                   {ANIMATION_MODES.map(m => (
                     <button key={m.id} onClick={() => dispatch({ mode: m.id })}
-                      style={{ ...btn(state.mode === m.id), padding: '8px 3px', fontSize: 9, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: '100%', fontWeight: state.mode === m.id ? 700 : 400 }}>
-                      <span style={{ fontSize: 15 }}>{m.icon}</span>
-                      <span>{m.label}</span>
+                      style={{ ...btn(state.mode===m.id), padding: '8px 3px', fontSize: 9, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: '100%', fontWeight: state.mode===m.id?700:400 }}>
+                      <span style={{ fontSize: 15 }}>{m.icon}</span><span>{m.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Colors */}
               <div style={{ ...G.glass, padding: 13 }}>
                 <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)', marginBottom: 9 }}>COLOUR PALETTE</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, marginBottom: 10 }}>
                   {COLOR_PRESETS.map(c => (
                     <button key={c.c} onClick={() => dispatch({ color: c.c })}
-                      style={{ ...btn(state.color === c.c, c.c), padding: '8px 4px', fontSize: 9, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: '100%' }}>
+                      style={{ ...btn(state.color===c.c, c.c), padding: '8px 4px', fontSize: 9, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: '100%' }}>
                       <div style={{ width: 18, height: 18, borderRadius: '50%', background: c.c, boxShadow: `0 0 10px ${c.g}` }} />
                       <span>{c.n}</span>
                     </button>
@@ -271,13 +244,12 @@ export default function AdminDash({ token, onLogout, onGoAudience }) {
                 </div>
               </div>
 
-              {/* Sliders */}
               <div style={{ ...G.glass, padding: 13, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
-                  { label: 'BPM',        key: 'bpm',         min: 40,  max: 220, step: 1,   color: '#ff00cc', fmt: v => v },
-                  { label: 'BRIGHTNESS', key: 'brightness',  min: 5,   max: 100, step: 1,   color: '#ffaa00', fmt: v => v + '%' },
-                  { label: 'INTENSITY',  key: 'intensity',   min: 10,  max: 100, step: 1,   color: '#00d4ff', fmt: v => v + '%' },
-                  { label: 'STROBE SPD', key: 'strobeSpeed', min: 2,   max: 30,  step: 0.5, color: '#ff1122', fmt: v => v + 'x' },
+                  { label:'BPM',        key:'bpm',         min:40,  max:220, step:1,   color:'#ff00cc', fmt:v=>v },
+                  { label:'BRIGHTNESS', key:'brightness',  min:5,   max:100, step:1,   color:'#ffaa00', fmt:v=>v+'%' },
+                  { label:'INTENSITY',  key:'intensity',   min:10,  max:100, step:1,   color:'#00d4ff', fmt:v=>v+'%' },
+                  { label:'STROBE SPD', key:'strobeSpeed', min:2,   max:30,  step:0.5, color:'#ff1122', fmt:v=>v+'x' },
                 ].map(sl => (
                   <div key={sl.key}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -293,36 +265,31 @@ export default function AdminDash({ token, onLogout, onGoAudience }) {
             </div>
           )}
 
-          {/* ── TAB 1: MOSAIC */}
-          {activeTab === 1 && (
-            <MosaicPanel state={state} dispatch={dispatch} showToast={showToast} />
-          )}
+          {/* TAB 1: MOSAIC */}
+          {activeTab === 1 && <MosaicPanel state={state} dispatch={dispatch} showToast={showToast} />}
 
-          {/* ── TAB 2: SEQUENCE */}
+          {/* TAB 2: SEQUENCE */}
           {activeTab === 2 && (
             <div style={{ ...G.glass, padding: 13, display: 'flex', flexDirection: 'column', gap: 11 }}>
               <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)' }}>TIMELINE SEQUENCER</div>
-
-              {/* Steps */}
-              <div className="scrollable" style={{ maxHeight: 200 }}>
+              <div style={{ maxHeight: 200, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 {seqSteps.length === 0
                   ? <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(255,255,255,0.2)', fontSize: 10, letterSpacing: '0.2em' }}>NO STEPS YET</div>
                   : seqSteps.map((s, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', marginBottom: 5,
-                      background: seqRunning && seqIdx === i ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.03)',
-                      borderRadius: 6, border: `1px solid ${seqRunning && seqIdx === i ? 'rgba(0,212,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                      background: seqRunning && seqIdx===i ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.03)',
+                      borderRadius: 6, border: `1px solid ${seqRunning && seqIdx===i ? 'rgba(0,212,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
                     }}>
                       <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
                       <span style={{ fontSize: 10, flex: 1, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.1em' }}>
                         {s.mode.toUpperCase()} · {s.bpm}BPM · {s.duration}s
                       </span>
-                      <button onClick={() => removeSeqStep(i)} style={{ ...btn(false, '#ff1122'), padding: '2px 8px', fontSize: 10 }}>×</button>
+                      <button onClick={() => removeSeqStep(i)} style={{ ...btn(false,'#ff1122'), padding: '2px 8px', fontSize: 10 }}>×</button>
                     </div>
                   ))
                 }
               </div>
-
               <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.28)' }}>ADD STEP</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
                 {['pulse','wave','galaxy','laser','bassdrop','rainbow','breathing','strobe','mosaic'].map(m => (
@@ -331,34 +298,31 @@ export default function AdminDash({ token, onLogout, onGoAudience }) {
                   </button>
                 ))}
               </div>
-
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={seqRunning ? stopSeq : runSeq}
-                  style={{ ...btn(!seqRunning, seqRunning ? '#ff1122' : '#39ff14'), flex: 1, padding: 10, fontSize: 11, fontWeight: 700 }}>
+                  style={{ ...btn(!seqRunning, seqRunning?'#ff1122':'#39ff14'), flex:1, padding:10, fontSize:11, fontWeight:700 }}>
                   {seqRunning ? '⬛ STOP' : '▶ RUN SEQUENCE'}
                 </button>
-                <button onClick={() => setSeqSteps([])} style={{ ...btn(false, '#ff1122'), padding: '10px 14px', fontSize: 11 }}>CLR</button>
+                <button onClick={() => setSeqSteps([])} style={{ ...btn(false,'#ff1122'), padding:'10px 14px', fontSize:11 }}>CLR</button>
               </div>
             </div>
           )}
 
-          {/* ── TAB 3: AI */}
-          {activeTab === 3 && (
-            <AIPanel state={state} dispatch={dispatch} setSeqSteps={setSeqSteps} showToast={showToast} />
-          )}
+          {/* TAB 3: AI */}
+          {activeTab === 3 && <AIPanel state={state} dispatch={dispatch} setSeqSteps={setSeqSteps} showToast={showToast} />}
 
-          {/* ── TAB 4: KEYS */}
+          {/* TAB 4: KEYS */}
           {activeTab === 4 && (
             <div style={{ ...G.glass, padding: 13 }}>
               <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)', marginBottom: 14 }}>KEYBOARD SHORTCUTS</div>
               {KB_SHORTCUTS.map(([k, d]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <kbd style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: '#00d4ff', fontFamily: "'Courier New', monospace", letterSpacing: '0.1em' }}>{k}</kbd>
+                  <kbd style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 5, padding: '3px 10px', fontSize: 11, color: '#00d4ff', fontFamily: "'Courier New', monospace" }}>{k}</kbd>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>{d}</span>
                 </div>
               ))}
-              <div style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, fontSize: 10, color: 'rgba(255,255,255,0.3)', lineHeight: 1.7, letterSpacing: '0.08em' }}>
-                📱 Mobile: Tap top-right corner of Audience View 5× to access admin login.
+              <div style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, fontSize: 10, color: 'rgba(255,255,255,0.3)', lineHeight: 1.7 }}>
+                📱 Mobile: Tap top-right corner 5× fast to open admin login.
               </div>
             </div>
           )}

@@ -127,7 +127,7 @@ io.on('connection', (socket) => {
 
   // Send current state immediately
   socket.emit('state', { ...showState, serverTime: Date.now() });
-  socket.emit('deviceId', { id: deviceId % 64 });
+  socket.emit('deviceId', { id: deviceId % 100 });
 
   // Broadcast updated count
   io.to(SESSION_ID).emit('stats', getStats());

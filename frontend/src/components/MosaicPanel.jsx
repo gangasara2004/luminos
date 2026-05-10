@@ -23,7 +23,10 @@ const G = {
   },
 };
 
-const TOTAL = 64;
+// 100 devices in a 10×10 grid
+const TOTAL  = 100;
+const COLS   = 10;
+const ROWS   = 10;
 
 export default function MosaicPanel({ state, dispatch, showToast }) {
   const [spinOffset] = useState(0);
@@ -34,7 +37,6 @@ export default function MosaicPanel({ state, dispatch, showToast }) {
     dispatch({ mosaicCustomColors: cols });
   };
 
-  const patternFn = MOSAIC_PATTERNS[state.mosaicPattern] || MOSAIC_PATTERNS['RANDOM'];
   const palette   = state.mosaicPalette === 'CUSTOM'
     ? state.mosaicCustomColors
     : (MOSAIC_PALETTES[state.mosaicPalette] || MOSAIC_PALETTES['SPECTRUM']);
@@ -43,7 +45,7 @@ export default function MosaicPanel({ state, dispatch, showToast }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
       <div style={{ ...G.glass, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* Activate button */}
+        {/* Activate */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 9, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.28)' }}>MOSAIC MODE</div>
           <button onClick={() => { dispatch({ mode: 'mosaic' }); showToast('Mosaic activated'); }}
@@ -54,10 +56,10 @@ export default function MosaicPanel({ state, dispatch, showToast }) {
 
         {/* Info */}
         <div style={{ background: 'rgba(255,0,200,0.06)', border: '1px solid rgba(255,0,200,0.15)', borderRadius: 8, padding: '10px 12px', fontSize: 10, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7 }}>
-          Each phone gets a <span style={{ color: '#ff00cc' }}>unique color slot</span> (0–63) based on their device number. The crowd forms a living color mosaic visible from stage.
+          Each of the <span style={{ color: '#ff00cc' }}>100 phones</span> gets a unique color slot (0–99) based on their device number. The crowd forms a living 10×10 color mosaic visible from stage.
         </div>
 
-        {/* Palette selector */}
+        {/* Palette */}
         <div>
           <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.32)', marginBottom: 8 }}>COLOR PALETTE</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
@@ -75,20 +77,20 @@ export default function MosaicPanel({ state, dispatch, showToast }) {
           </div>
         </div>
 
-        {/* Pattern selector */}
+        {/* Pattern */}
         <div>
           <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.32)', marginBottom: 8 }}>DISTRIBUTION PATTERN</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
             {Object.keys(MOSAIC_PATTERNS).map(name => (
               <button key={name} onClick={() => dispatch({ mosaicPattern: name })}
-                style={{ ...btn(state.mosaicPattern === name), padding: '7px 4px', fontSize: 8, width: '100%', letterSpacing: '0.05em' }}>
+                style={{ ...btn(state.mosaicPattern === name), padding: '7px 4px', fontSize: 8, width: '100%' }}>
                 {name}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Beat + Rotate toggles */}
+        {/* Beat + Rotate */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <button onClick={() => dispatch({ mosaicBeat: !state.mosaicBeat })}
             style={{ ...btn(state.mosaicBeat, '#ff00cc'), padding: '9px 8px', fontSize: 10 }}>
@@ -134,12 +136,19 @@ export default function MosaicPanel({ state, dispatch, showToast }) {
         </div>
       </div>
 
-      {/* Crowd Map (8×8 grid) */}
+      {/* Crowd Map — 10×10 = 100 devices */}
       <div style={{ ...G.glass, padding: 13 }}>
         <div style={{ fontSize: 9, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.32)', marginBottom: 8 }}>
-          CROWD MAP  ·  8 × 8 = 64 DEVICES
+          CROWD MAP · 10 × 10 = 100 DEVICES
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 2, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+          gap: 2,
+          borderRadius: 6,
+          overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}>
           {Array.from({ length: TOTAL }, (_, id) => {
             const hex = getDeviceColor(id, TOTAL, spinOffset, state);
             return (
@@ -150,13 +159,13 @@ export default function MosaicPanel({ state, dispatch, showToast }) {
                   aspectRatio: '1',
                   background: hex,
                   opacity: state.mode === 'mosaic' ? 0.92 : 0.38,
-                  transition: 'opacity .3s',
+                  transition: 'background 0.3s, opacity 0.3s',
                 }}
               />
             );
           })}
         </div>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 6, textAlign: 'center', letterSpacing: '0.12em' }}>
+        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.22)', marginTop: 6, textAlign: 'center', letterSpacing: '0.12em' }}>
           Each cell = one phone · Pattern: {state.mosaicPattern}
         </div>
       </div>

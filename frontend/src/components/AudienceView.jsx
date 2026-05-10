@@ -4,36 +4,51 @@ import { useSocket }   from '../hooks/useSocket.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
 import { drawFrame, createParticles, createLasers } from '../utils/canvas.js';
 
-const TOTAL_DEVICES = 64;
+const TOTAL_DEVICES = 100;
 
 export default function AudienceView({ onAdminTap }) {
-  const canvasRef      = useRef(null);
-  const animRef        = useRef(null);
-  const stateRef       = useRef(null);   // latest state without re-render
-  const particlesRef   = useRef([]);
-  const lasersRef      = useRef([]);
-  const shockwaveRef   = useRef(null);
-  const timeRef        = useRef(0);
-  const beatPhaseRef   = useRef(0);
-  const lastTSRef      = useRef(0);
-  const spinRef        = useRef(0);
-  const adminTapCount  = useRef(0);
-  const adminTapTimer  = useRef(null);
+  const canvasRef     = useRef(null);
+  const animRef       = useRef(null);
+  const stateRef      = useRef(null);
+  const particlesRef  = useRef([]);
+  const lasersRef     = useRef([]);
+  const shockwaveRef  = useRef(null);
+  const timeRef       = useRef(0);
+  const beatPhaseRef  = useRef(0);
+  const lastTSRef     = useRef(0);
+  const spinRef       = useRef(0);
+  const adminTapCount = useRef(0);
+  const adminTapTimer = useRef(null);
 
-  const [joined, setJoined]       = useState(false);
-  const [showJoin, setShowJoin]   = useState(true);
-  const [offline, setOffline]     = useState(false);
+  const [joined, setJoined]         = useState(false);
+  const [showJoin, setShowJoin]     = useState(true);
+  const [offline, setOffline]       = useState(false);
+  const [fsError, setFsError]       = useState(false); // fullscreen unavailable
 
-  // ── SOCKET
-  const { connected, state, deviceId, onBeat } = useSocket({ role: 'audience' });
+  const { connected, state, deviceId, stats, onBeat } = useSocket({ role: 'audience' });
 
-  // Keep stateRef in sync without causing re-renders in the draw loop
   useEffect(() => { stateRef.current = state; }, [state]);
-
-  // ── WAKE LOCK (prevent screen sleep)
   useWakeLock(true);
 
-  // ── BEAT CALLBACK
+  // ── FULLSCREEN — tries every vendor prefix + iOS workaround
+  const tryFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    const req =
+      el.requestFullscreen        ||
+      el.webkitRequestFullscreen  ||
+      el.mozRequestFullScreen     ||
+      el.msRequestFullscreen;
+
+    if (req) {
+      req.call(el).catch(() => setFsError(true));
+    } else {
+      // iOS Safari: no fullscreen API — hide address bar by scrolling
+      setFsError(true);
+      window.scrollTo(0, 1);
+    }
+  }, []);
+
+  // ── BEAT
   useEffect(() => {
     onBeat(() => {
       const s = stateRef.current;
@@ -47,40 +62,28 @@ export default function AudienceView({ onAdminTap }) {
           born: performance.now(),
         };
       }
-      // Android vibration on bass drop
-      if ((s.mode === 'bassdrop') && navigator.vibrate) {
-        navigator.vibrate(40);
-      }
+      if (s.mode === 'bassdrop' && navigator.vibrate) navigator.vibrate(40);
     });
   }, [onBeat]);
-
-  // ── FULLSCREEN on join (best-effort)
-  const tryFullscreen = useCallback(() => {
-    const el = document.documentElement;
-    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-    if (req) req.call(el).catch(() => {});
-  }, []);
 
   // ── JOIN
   useEffect(() => {
     if (connected && !joined) {
       setJoined(true);
       setOffline(false);
-      setTimeout(() => setShowJoin(false), 2800);
-      tryFullscreen();
+      setTimeout(() => setShowJoin(false), 3000);
     }
     if (!connected && joined) setOffline(true);
     if (connected) setOffline(false);
-  }, [connected, joined, tryFullscreen]);
+  }, [connected, joined]);
 
   // ── INIT ASSETS
   useEffect(() => {
-    const W = window.innerWidth, H = window.innerHeight;
-    particlesRef.current = createParticles(90, W, H);
+    particlesRef.current = createParticles(90, window.innerWidth, window.innerHeight);
     lasersRef.current    = createLasers(7);
   }, []);
 
-  // ── MAIN DRAW LOOP
+  // ── CANVAS LOOP
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -89,43 +92,30 @@ export default function AudienceView({ onAdminTap }) {
     const resize = () => {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
-      // Reinit particles on resize
       particlesRef.current = createParticles(90, canvas.width, canvas.height);
     };
     resize();
     window.addEventListener('resize', resize);
-    // iOS orientation change
-    window.addEventListener('orientationchange', () => setTimeout(resize, 300));
-
+    window.addEventListener('orientationchange', () => setTimeout(resize, 350));
     lastTSRef.current = performance.now();
 
     const draw = (ts) => {
       const dt = Math.min((ts - lastTSRef.current) / 1000, 0.05);
       lastTSRef.current = ts;
       timeRef.current  += dt;
-
       const s = stateRef.current;
       if (!s) { animRef.current = requestAnimationFrame(draw); return; }
-
       const W = canvas.width, H = canvas.height;
-
-      // Advance beat phase locally (server beats are the authority but we interpolate)
-      const bpmInterval = 60 / Math.max(s.bpm, 1);
-      beatPhaseRef.current = (beatPhaseRef.current + dt / bpmInterval) % 1;
-
-      // Advance mosaic spin
+      beatPhaseRef.current = (beatPhaseRef.current + dt / (60 / Math.max(s.bpm, 1))) % 1;
       if (s.mosaicRotate) spinRef.current += dt * s.mosaicRotateSpeed;
-
       drawFrame(ctx, W, H, timeRef.current, beatPhaseRef.current, dt, s, {
         particles:    particlesRef.current,
         lasers:       lasersRef.current,
         shockwaveRef: shockwaveRef,
         spinOffset:   spinRef.current,
-      }, deviceId);
-
+      }, deviceId % TOTAL_DEVICES);
       animRef.current = requestAnimationFrame(draw);
     };
-
     animRef.current = requestAnimationFrame(draw);
 
     return () => {
@@ -135,35 +125,48 @@ export default function AudienceView({ onAdminTap }) {
     };
   }, [deviceId]);
 
-  // ── SECRET ADMIN TAP (tap top-right corner 5× quickly)
+  // ── SECRET ADMIN TAP (5× top-right)
   const handleSecretTap = useCallback(() => {
     adminTapCount.current += 1;
     clearTimeout(adminTapTimer.current);
     adminTapTimer.current = setTimeout(() => { adminTapCount.current = 0; }, 2000);
-    if (adminTapCount.current >= 5) {
-      adminTapCount.current = 0;
-      onAdminTap();
-    }
+    if (adminTapCount.current >= 5) { adminTapCount.current = 0; onAdminTap(); }
   }, [onAdminTap]);
+
+  // ── TAP ANYWHERE to trigger fullscreen (required by browsers)
+  const handleTap = useCallback(() => {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      tryFullscreen();
+    }
+  }, [tryFullscreen]);
 
   const modeLabel = state?.blackout ? 'BLACKOUT' : (state?.mode || '').toUpperCase();
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: '#000',
-      overflow: 'hidden',
-      touchAction: 'none', // prevent scroll on iOS
-    }}>
+    <div
+      onClick={handleTap}
+      style={{
+        position: 'fixed', inset: 0,
+        // iOS full-height fix
+        width: '100vw',
+        height: '100vh',
+        height: '100dvh',
+        background: '#000',
+        overflow: 'hidden',
+        touchAction: 'none',
+        // Force GPU layer
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)',
+      }}
+    >
       {/* CANVAS */}
       <canvas
         ref={canvasRef}
         style={{
           position: 'absolute', inset: 0,
           width: '100%', height: '100%',
+          display: 'block',
           willChange: 'transform',
-          WebkitTransform: 'translateZ(0)',
-          transform: 'translateZ(0)',
         }}
       />
 
@@ -171,40 +174,64 @@ export default function AudienceView({ onAdminTap }) {
       {showJoin && (
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'rgba(0,0,0,0.78)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
+          background: 'rgba(0,0,0,0.82)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          zIndex: 10,
-          animation: 'scaleIn .5s ease',
-          padding: 'max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom))',
+          zIndex: 10, animation: 'scaleIn .5s ease',
+          padding: '24px max(24px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left))',
         }}>
           <div style={{ textAlign: 'center', color: '#fff', fontFamily: "'Courier New', monospace" }}>
+
+            {/* LOGO */}
             <div style={{
-              fontSize: 'clamp(2.5rem, 12vw, 5rem)',
+              fontSize: 'clamp(2.8rem, 14vw, 5.5rem)',
               fontWeight: 900, letterSpacing: '0.18em',
               color: '#00d4ff',
               textShadow: '0 0 40px #00d4ff, 0 0 80px #8b00ff',
-              marginBottom: 10,
+              marginBottom: 8,
             }}>LUMINOS</div>
-            <div style={{ fontSize: 'clamp(9px, 2.5vw, 13px)', letterSpacing: '0.35em', color: 'rgba(0,212,255,0.9)' }}>
+
+            <div style={{ fontSize: 'clamp(9px, 2.5vw, 13px)', letterSpacing: '0.38em', color: 'rgba(0,212,255,0.85)' }}>
               CONCERT LIGHT SYSTEM
             </div>
-            {connected ? (
-              <>
-                <div style={{ marginTop: 32, fontSize: 12, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.5)' }}>
-                  DEVICE #{deviceId} CONNECTED
-                </div>
-                <div style={{ marginTop: 6, fontSize: 10, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.25)' }}>
-                  SYNCING WITH LIVE SHOW…
-                </div>
-              </>
-            ) : (
-              <div style={{ marginTop: 32, fontSize: 11, letterSpacing: '0.22em', color: 'rgba(255,170,0,0.7)' }}>
-                CONNECTING…
+
+            {/* LIVE COUNT */}
+            <div style={{ marginTop: 44, marginBottom: 4 }}>
+              <div style={{
+                fontSize: 'clamp(3.5rem, 18vw, 7rem)',
+                fontWeight: 900, lineHeight: 1,
+                color: '#39ff14',
+                textShadow: '0 0 30px #39ff14, 0 0 70px #39ff14aa',
+                fontFamily: "'Courier New', monospace",
+                transition: 'all 0.4s ease',
+              }}>
+                {connected ? stats.total : '·'}
+              </div>
+              <div style={{
+                fontSize: 'clamp(9px, 2.5vw, 12px)',
+                letterSpacing: '0.35em',
+                color: connected ? 'rgba(57,255,20,0.65)' : 'rgba(255,170,0,0.7)',
+                marginTop: 6,
+              }}>
+                {connected
+                  ? `DEVICE${stats.total !== 1 ? 'S' : ''} CONNECTED`
+                  : 'CONNECTING…'}
+              </div>
+            </div>
+
+            {/* Device ID */}
+            {connected && (
+              <div style={{ marginTop: 24, fontSize: 10, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.22)' }}>
+                YOU ARE DEVICE #{deviceId}
               </div>
             )}
+
+            {/* Tap hint */}
+            <div style={{ marginTop: 32, fontSize: 10, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.18)', animation: 'blink 2s infinite' }}>
+              TAP SCREEN FOR FULLSCREEN
+            </div>
           </div>
         </div>
       )}
@@ -213,26 +240,25 @@ export default function AudienceView({ onAdminTap }) {
       {offline && !showJoin && (
         <div style={{
           position: 'absolute',
-          top: 'env(safe-area-inset-top, 0)',
+          top: 'env(safe-area-inset-top, 0px)',
           left: 0, right: 0,
-          background: 'rgba(255,100,0,0.9)',
-          padding: '10px 16px',
-          textAlign: 'center',
+          background: 'rgba(255,100,0,0.92)',
+          padding: '10px 16px', textAlign: 'center',
           fontSize: 11, letterSpacing: '0.2em',
           color: '#000', fontFamily: "'Courier New', monospace",
           fontWeight: 700, zIndex: 20,
         }}>
-          RECONNECTING…
+          ⚠ RECONNECTING…
         </div>
       )}
 
-      {/* MODE LABEL (very subtle) */}
+      {/* MODE LABEL */}
       {!showJoin && (
         <div style={{
           position: 'absolute',
           top: 'max(12px, env(safe-area-inset-top))',
           left: '50%', transform: 'translateX(-50%)',
-          color: 'rgba(255,255,255,0.12)',
+          color: 'rgba(255,255,255,0.1)',
           fontSize: 9, letterSpacing: '0.4em',
           fontFamily: "'Courier New', monospace",
           pointerEvents: 'none', zIndex: 5,
@@ -241,26 +267,36 @@ export default function AudienceView({ onAdminTap }) {
         </div>
       )}
 
+      {/* LIVE COUNT (persistent dot) */}
+      {!showJoin && connected && (
+        <div style={{
+          position: 'absolute',
+          top: 'max(12px, env(safe-area-inset-top))',
+          right: 'max(12px, env(safe-area-inset-right))',
+          display: 'flex', alignItems: 'center', gap: 5,
+          pointerEvents: 'none', zIndex: 5,
+        }}>
+          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#39ff14', boxShadow: '0 0 6px #39ff14', animation: 'blink 2s infinite' }} />
+          <span style={{ fontSize: 9, letterSpacing: '0.15em', color: 'rgba(255,255,255,0.18)', fontFamily: "'Courier New', monospace" }}>
+            {stats.total}
+          </span>
+        </div>
+      )}
+
       {/* SECRET ADMIN TAP ZONE (top-right corner, invisible) */}
       <div
-        onClick={handleSecretTap}
-        style={{
-          position: 'absolute',
-          top: 0, right: 0,
-          width: 72, height: 72,
-          zIndex: 30,
-          cursor: 'default',
-        }}
+        onClick={(e) => { e.stopPropagation(); handleSecretTap(); }}
+        style={{ position: 'absolute', top: 0, right: 0, width: 88, height: 88, zIndex: 30 }}
       />
 
-      {/* Device # (bottom-left, barely visible) */}
+      {/* Device # */}
       {!showJoin && (
         <div style={{
           position: 'absolute',
           bottom: 'max(10px, env(safe-area-inset-bottom))',
           left: 'max(10px, env(safe-area-inset-left))',
-          color: 'rgba(255,255,255,0.08)',
-          fontSize: 9, letterSpacing: '0.15em',
+          color: 'rgba(255,255,255,0.07)',
+          fontSize: 9, letterSpacing: '0.12em',
           fontFamily: "'Courier New', monospace",
           pointerEvents: 'none',
         }}>
